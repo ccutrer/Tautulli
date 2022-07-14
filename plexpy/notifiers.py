@@ -2372,19 +2372,23 @@ class MQTT(Notifier):
                        'as_json': 0
                        }
 
-    def agent_notify(self, subject='', body='', action='', parameters={}, **kwargs):
+    def agent_notify(self, subject='', body='', action='', **kwargs):
         topic = self.config['topic']
         if not topic:
             logger.error("Tautulli Notifiers :: MQTT topic not specified.")
             return
 
         # format the topic
-        topic = topic.format(**parameters)
+        topic = topic.format(**kwargs.get('parameters', {}))
+
+        if self.config['as_json']:
+            subject = json.loads(subject)
+            body = json.loads(body)
 
         if self.config['incl_subject']:
-            data = json.dumps({'subject': subject,
-                               'body': body,
-                               'topic': topic})
+            data = {'subject': subject,
+                    'body': body,
+                    'topic': topic}
         else:
             data = body
 
@@ -2399,7 +2403,7 @@ class MQTT(Notifier):
         logger.info("Tautulli Notifiers :: Sending {name} notification...".format(name=self.NAME))
 
         paho.mqtt.publish.single(
-            topic, payload=data, qos=self.config['qos'], retain=bool(self.config['retain']),
+            topic, payload=json.dumps(data), qos=self.config['qos'], retain=bool(self.config['retain']),
             hostname=self.config['broker'], port=self.config['port'], client_id=self.config['clientid'],
             keepalive=self.config['keep_alive'], auth=auth or None, protocol=protocol
         )
@@ -2480,10 +2484,9 @@ class MQTT(Notifier):
                          {'label': 'Include Subject',
                           'value': self.config['incl_subject'],
                           'name': 'mqtt_incl_subject',
-                          'description': 'Include the subject in the MQTT message.<br>'
-                                         'The default is to wrap the notification subject and body in a JSON object, '
-                                         'and send that as the MQTT payload. By unchecking this option, the body will '
-                                         'be sent as the bare payload, with no additional escaping.',
+                          'description': 'Include the subject in the MQTT payload. '
+                                         'The default is to wrap the notification subject and body into a single payload. '
+                                         'Uncheck to only send the notification body as the bare payload.',
                           'input_type': 'checkbox'
                           },
                          {'label': 'Send Message as JSON',

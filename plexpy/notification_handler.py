@@ -403,7 +403,7 @@ def notify(notifier_id=None, notify_action=None, stream_data=None, timeline_data
                                                        notify_action=notify_action,
                                                        parameters=parameters,
                                                        agent_id=notifier_config['agent_id'],
-                                                       as_json=notifier_config['config']['as_json'])
+                                                       as_json=notifier_config['config'].get('as_json', False))
 
     # Set the notification state in the db
     notification_id = set_notify_state(session=stream_data or timeline_data,
@@ -1322,36 +1322,37 @@ def build_notify_text(subject='', body='', notify_action=None, parameters=None, 
             script_args = []
 
     elif agent_id == 25 or as_json:
+        agent = 'MQTT' if agent_id == 23 else 'webhook'
         if subject:
             try:
                 subject = json.loads(subject)
             except ValueError as e:
-                logger.error("Tautulli NotificationHandler :: Unable to parse custom webhook json header data: %s. Using fallback." % e)
+                logger.error("Tautulli NotificationHandler :: Unable to parse custom %s json header data: %s. Using fallback." % (agent, e))
                 subject = ''
         if subject:
             try:
                 subject = json.dumps(helpers.traverse_map(subject, str_formatter))
             except LookupError as e:
-                logger.error("Tautulli NotificationHandler :: Unable to parse parameter %s in webhook header data. Using fallback." % e)
+                logger.error("Tautulli NotificationHandler :: Unable to parse parameter %s in %s header data. Using fallback." % (e, agent))
                 subject = ''
             except Exception as e:
-                logger.exception("Tautulli NotificationHandler :: Unable to parse custom webhook header data: %s. Using fallback." % e)
+                logger.exception("Tautulli NotificationHandler :: Unable to parse custom %s header data: %s. Using fallback." % (agent, e))
                 subject = ''
 
         if body:
             try:
                 body = json.loads(body)
             except ValueError as e:
-                logger.error("Tautulli NotificationHandler :: Unable to parse custom webhook json body data: %s. Using fallback." % e)
+                logger.error("Tautulli NotificationHandler :: Unable to parse custom %s json body data: %s. Using fallback." % (agent, e))
                 body = ''
         if body:
             try:
                 body = json.dumps(helpers.traverse_map(body, str_formatter))
             except LookupError as e:
-                logger.error("Tautulli NotificationHandler :: Unable to parse parameter %s in webhook body data. Using fallback." % e)
+                logger.error("Tautulli NotificationHandler :: Unable to parse parameter %s in %s body data. Using fallback." % (e, agent))
                 body = ''
             except Exception as e:
-                logger.exception("Tautulli NotificationHandler :: Unable to parse custom webhook body data: %s. Using fallback." % e)
+                logger.exception("Tautulli NotificationHandler :: Unable to parse custom %s body data: %s. Using fallback." % (agent, e))
                 body = ''
 
     else:
